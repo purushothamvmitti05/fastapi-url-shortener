@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -18,6 +20,9 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
+
 
 # Dependency to get a DB session per request
 def get_db():
@@ -26,6 +31,10 @@ def get_db():
         yield db
     finally:
         db.close()
+
+@app.get("/")
+def serve_homepage(request: Request):
+    return templates.TemplateResponse(request, "index.html")
 
 
 @app.get("/health")
